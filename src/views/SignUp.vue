@@ -1,6 +1,6 @@
 <template>
   <div id="container">
-    <!-- <loading active="true" loader="bars" opacity="0.5" /> -->
+    <loading :active="loading" loader="bars" opacity="0.5" />
     <figure>
       <img id="img1" src="../static/girl2.png" alt="" draggable="false" />
       <img id="img2" src="../static/boy.png" alt="" draggable="false" />
@@ -86,10 +86,9 @@ export default {
       password: null,
       confirmPass: null,
       message: null,
-      emailValid: null,
       disableBtn: false,
       btnLabel: "Sign Up",
-      userData: null,
+      loading: false,
     };
   },
 
@@ -124,7 +123,6 @@ export default {
         const check =
           /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
         if (!check.test(this.email)) {
-          this.emailValid = false;
           return "Email is Invalid!";
         }
       }
@@ -151,8 +149,10 @@ export default {
     login() {},
 
     async register() {
+      this.loading = true
+
       if (this.password !== this.confirmPass) {
-        return;
+        return this.loading = false;
       }
       if (
         !this.fullName ||
@@ -161,34 +161,33 @@ export default {
         !this.password ||
         !this.confirmPass
       ) {
-        return;
+        return this.loading = false;
       }
       const verify = await this.verifyEmail();
       console.log(verify);
 
       if (!verify) {
-        alert("Invalid Email");
-        return;
+        this.loading = false
+        return ;
       }
 
       createUserWithEmailAndPassword(auth, this.email, this.password)
         .then((userCredential) => {
           window.localStorage.setItem("loginEmail", this.email);
-          this.userData = userCredential;
           // Signed in
 
           const user = userCredential;
           console.log(user);
 
           //get user uid
+
         })
         .catch((error) => {
           // const errorCode = error.code;
           const errorMessage = error.message;
-          // ..
           this.message = errorMessage;
           console.log(this.message);
-          return;
+          return this.loading = false;
         });
 
       // try {

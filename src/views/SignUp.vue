@@ -1,8 +1,9 @@
 <template>
   <div id="container">
+    <!-- <loading active="true" loader="bars" opacity="0.5" /> -->
     <figure>
-      <img id="img1" src="../static/girl2.png" alt="" />
-      <img id="img2" src="../static/boy.png" alt="" />
+      <img id="img1" src="../static/girl2.png" alt="" draggable="false" />
+      <img id="img2" src="../static/boy.png" alt="" draggable="false" />
     </figure>
 
     <div id="signUp">
@@ -55,15 +56,24 @@
           <p>{{ confirmPassMessage }}</p>
         </div>
         <p>{{ message }}</p>
-        <button @click.prevent="register()">Sign Up</button>
+        <button @click.prevent="register()" :disabled="disableBtn">
+          {{ btnLabel }}
+        </button>
       </form>
     </div>
   </div>
 </template>
 
 <script>
-import { assertExpressionStatement } from "@babel/types";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import Loading from "vue-loading-overlay";
+import "vue-loading-overlay/dist/vue-loading.css";
+import VueCookies from "vue-cookies";
+
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  getAuth,
+} from "firebase/auth";
 import { auth } from "../firebaseConfig";
 import axios from "axios";
 
@@ -75,12 +85,16 @@ export default {
       email: null,
       password: null,
       confirmPass: null,
-      resData: {},
       message: null,
       emailValid: null,
+      disableBtn: false,
+      btnLabel: "Sign Up",
     };
   },
 
+  components: {
+    Loading,
+  },
   computed: {
     fullNameMessage() {
       if (this.fullName && this.fullName.length == 1) {
@@ -133,75 +147,91 @@ export default {
   },
 
   methods: {
+    login() {},
+
     async register() {
-      const emailValid = this.verifyEmail();
-      
       if (this.password !== this.confirmPass) {
         return;
       }
-
       if (
-        this.fullName &&
-        this.username &&
-        this.email &&
-        this.password &&
-        this.confirmPass
+        !this.fullName ||
+        !this.username ||
+        !this.email ||
+        !this.password ||
+        !this.confirmPass
       ) {
-        
-
-        if (emailValid === true) {
-          await createUserWithEmailAndPassword(auth, this.email, this.password)
-            .then((userCredential) => {
-              // Signed in
-              const user = userCredential.user;
-              console.log(user);
-              // ...
-            })
-            .catch((error) => {
-              const errorCode = error.code;
-              const errorMessage = error.message;
-              // ..
-              this.message = errorMessage;
-              return;
-            });
-        } else {
-          console.log("Invalid Email!")
-          return;
-        }
-
-        this.$router.push({ path: "/" });
-      } else {
-        this.message = "Fill out all the fields!";
         return;
       }
+      const verify = await this.verifyEmail();
+      console.log(verify);
+
+      if (!verify) {
+        alert("Invalid Email")
+        return;
+      }
+
+      createUserWithEmailAndPassword(auth, this.email, this.password)
+        .then((userCredential) => {
+          window.localStorage.setItem("loginEmail", this.email);
+
+          // Signed in
+          const user = userCredential;
+          console.log(user);
+
+          //get user uid
+        })
+        .catch((error) => {
+          // const errorCode = error.code;
+          const errorMessage = error.message;
+          // ..
+          this.message = errorMessage;
+          console.log(this.message);
+          return;
+        });
+
+      // try {
+      //   const useremail = this.email;
+      //   getAuth()
+      //     .generateEmailVerificationLink(useremail, actionCodeSettings)
+      //     .then((link) => {
+      //       // Construct email verification template, embed the link and send
+      //       // using custom SMTP server.
+      //       sendCustomVerificationEmail(useremail, displayName, link);
+      //     })
+      //     .catch((error) => {
+      //       // Some error occurred.
+      //     });
+      // } catch (error) {
+      //   console.log(error);
+      // }
+      return this.$router.push({ path: "/login" });
     },
 
     async verifyEmail() {
-      await axios
-        .get(
-          `https://emailverification.whoisxmlapi.com/api/v2?apiKey=at_FPCHUZJpM1IbKvu4AUphNc1zqs6i7&emailAddress= ${this.email}`
-        )
-        .then((response) => {
-          this.resData = response.data;
-          console.log(this.resData);
-          console.log("Loading");
-        })
-        .then((result) => {
-          console.log("Finish Checking");
-          if (
-            this.resData.formatCheck &&
-            this.resData.freeCheck &&
-            this.resData.dnsCheck &&
-            this.resData.smtpCheck
-          ) {
-            return true;
-          }
-          return false;
-        })
+      let verify = false;
 
-        .catch((err) => {
-          console.log(err);
-        });
+      try {
+        const res = await axios.get(
+          `https://emailverification.whoisxmlapi.com/api/v2?apiKey=at_FPCHUZJpM1IbKvu4AUphNc1zqs6i7&emailAddress= ${this.email}`
+        );
+
+        const data = res.data;
+        console.log(data);
+
+        if (
+          data.formatCheck == "true" &&
+          data.freeCheck == "true" &&
+          data.dnsCheck == "true" &&
+          data.smtpCheck == "true"
+        ) {
+          console.log("valid email");
+          verify = true;
+        }
+
+        return verify;
+      } catch (error) {
+        console.log(`Error Occurred: ${error}`);
+      }
     },
   },
 };

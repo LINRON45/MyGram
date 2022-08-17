@@ -89,6 +89,7 @@ export default {
       emailValid: null,
       disableBtn: false,
       btnLabel: "Sign Up",
+      userData: null,
     };
   },
 
@@ -166,15 +167,16 @@ export default {
       console.log(verify);
 
       if (!verify) {
-        alert("Invalid Email")
+        alert("Invalid Email");
         return;
       }
 
       createUserWithEmailAndPassword(auth, this.email, this.password)
         .then((userCredential) => {
           window.localStorage.setItem("loginEmail", this.email);
-
+          this.userData = userCredential;
           // Signed in
+
           const user = userCredential;
           console.log(user);
 
@@ -190,20 +192,12 @@ export default {
         });
 
       // try {
-      //   const useremail = this.email;
-      //   getAuth()
-      //     .generateEmailVerificationLink(useremail, actionCodeSettings)
-      //     .then((link) => {
-      //       // Construct email verification template, embed the link and send
-      //       // using custom SMTP server.
-      //       sendCustomVerificationEmail(useremail, displayName, link);
-      //     })
-      //     .catch((error) => {
-      //       // Some error occurred.
-      //     });
+      //   const firebaseAuth = auth;
+      //   await sendEmailVerification(firebaseAuth.currentUser);
       // } catch (error) {
-      //   console.log(error);
+      //   console.log(`Error Occurred:\n ${error}`);
       // }
+
       return this.$router.push({ path: "/login" });
     },
 
